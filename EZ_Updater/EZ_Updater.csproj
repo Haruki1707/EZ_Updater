@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UserSecretsId>0b8fa959-1b49-4432-98fa-cdf20fab0ca6</UserSecretsId>
+    <OutputType>Library</OutputType>
+    <DebugType>embedded</DebugType>
+    <SignAssembly>False</SignAssembly>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Authors>Haruki1707</Authors>
+    <Version>0.5.0</Version>
+    <Description>Updater for standalone c# apps that relies on GitHub releases</Description>
+    <Copyright>Haruki1707 2021</Copyright>
+    <RepositoryUrl>https://github.com/Haruki1707/EZ_Updater</RepositoryUrl>
+    <PackageTags>Updater; Update; GitHub; Release_Downloader</PackageTags>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageProjectUrl></PackageProjectUrl>
+    <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+    <PackageLicenseExpression> GPL-3.0-only</PackageLicenseExpression>
+    <PackageIcon>EZ Updater.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="EZ Updater.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
