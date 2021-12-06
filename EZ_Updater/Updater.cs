@@ -54,23 +54,23 @@ namespace EZ_Updater
     public class Updater
     {
         /// <summary>
-        /// GitHub User owner of the repository where update is located
+        /// GitHub user owner of the repository where the release is located
         /// </summary>
         public static string GitHub_User { get; set; }
-        
+
         /// <summary>
-        /// GitHub Repositoy where update is located
+        /// GitHub repository where the release is located
         /// </summary>
         public static string GitHub_Repository { get; set; }
         
         /// <summary>
-        /// GitHub Asset to download
+        /// GitHub asset to download
         /// </summary>
         /// <value>ProgramName.exe</value>
         public static string GitHub_Asset { get; set; }
         
         /// <returns>
-        /// Count of how many retry of downloading are done (MAX: 4)
+        /// Count of how many retries of downloading are done (MAX: 4)
         /// </returns>
         public static int DownloadRetryCount { get; private set; }
         
@@ -95,7 +95,7 @@ namespace EZ_Updater
         public static UpdaterState State { get; private set; }
         
         /// <returns>
-        /// Updater update download percentage
+        /// Update download percentage
         /// </returns>
         public static int ProgressPercentage { get; private set; }
 
@@ -158,7 +158,7 @@ namespace EZ_Updater
         public static Action<string> CustomLogger = null;
 
         /// <summary>
-        /// Occurs when download is canceled after some attempts
+        /// Occurs when the download is canceled after some attempts
         /// </summary>
         public static event DownloadCanceledEvent DownloadCanceled;
         public delegate void DownloadCanceledEvent(object sender, EventArgs args);
@@ -172,7 +172,7 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Occurs when download is being retried
+        /// Occurs when the download is being retried
         /// </summary>
         public static event RetryDownloadEvent RetryDownload;
         public delegate void RetryDownloadEvent(object sender, EventArgs args);
@@ -186,7 +186,7 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Occurs when download make a progress
+        /// Occurs when the download has progressed
         /// </summary>
         public static event DownloadProgressEvent DownloadProgress;
         public delegate void DownloadProgressEvent(object sender, DownloadProgressChangedEventArgs args);
@@ -200,7 +200,7 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Occurs when installation make a progress
+        /// Occurs when the installation has progressed
         /// </summary>
         public static event UpdateProgressEvent UpdateProgress;
         public delegate void UpdateProgressEvent(object sender, EventArgs args);
@@ -211,7 +211,7 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Occurs when installation of the update fails
+        /// Occurs when the installation of the update fails
         /// </summary>
         public static event UpdateFailedEvent UpdateFailed;
         public delegate void UpdateFailedEvent(object sender, EventArgs args);
@@ -225,7 +225,7 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Occurs when updating process is finished. You should restart your application.
+        /// Occurs when the updating process is finished. You should restart your application.
         /// </summary>
         public static event UpdateFinishedEvent UpdateFinished;
         public delegate void UpdateFinishedEvent(object sender, EventArgs args);
@@ -241,7 +241,7 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Occurs when Updater state changes
+        /// Occurs when the Updater state changes
         /// </summary>
         public static event UpdaterChangeEvent UpdaterChange;
         public delegate void UpdaterChangeEvent(object sender, EventArgs args);
@@ -281,7 +281,7 @@ namespace EZ_Updater
         /// <summary>
         /// Sync CheckUpdate
         /// </summary>
-        /// <returns>True or False depending if Update is available</returns>
+        /// <returns>True or False depending if an update is available</returns>
         public static bool CheckUpdate()
         {
             return Task.Run(CheckVersion).GetAwaiter().GetResult();
@@ -290,9 +290,9 @@ namespace EZ_Updater
         /// <summary>
         /// Sync CheckUpdate
         /// </summary>
-        /// <param name="GitHubUser">GitHub User owner of the repository where update is located</param>
-        /// <param name="GitHubRepository">GitHub Repositoy where update is located</param>
-        /// <returns>True or False depending if Update is available</returns>
+        /// <param name="GitHubUser">GitHub user owner of the repository where the update is located</param>
+        /// <param name="GitHubRepository">GitHub repository where the update is located</param>
+        /// <returns>True or False depending if an update is available</returns>
         public static bool CheckUpdate(string GitHubUser, string GitHubRepository)
         {
             GitHub_User = GitHubUser;
@@ -303,7 +303,7 @@ namespace EZ_Updater
         /// <summary>
         /// Async CheckUpdate
         /// </summary>
-        /// <returns>True or False depending if Update is available</returns>
+        /// <returns>True or False depending if an update is available</returns>
         public static async Task<bool> CheckUpdateAsync()
         {
             return await CheckVersion();
@@ -312,9 +312,9 @@ namespace EZ_Updater
         /// <summary>
         /// Async CheckUpdate
         /// </summary>
-        /// <param name="GitHubUser">GitHub User owner of the repository where update is located</param>
-        /// <param name="GitHubRepository">GitHub Repositoy where update is located</param>
-        /// <returns>True or False depending if Update is available</returns>
+        /// <param name="GitHubUser">GitHub user owner of the repository where the update is located</param>
+        /// <param name="GitHubRepository">GitHub repositoy where the update is located</param>
+        /// <returns>True or False depending if an update is available</returns>
         public static async Task<bool> CheckUpdateAsync(string GitHubUser, string GitHubRepository)
         {
             GitHub_User = GitHubUser;
@@ -405,9 +405,9 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Updates the application wheter or not there new update available
+        /// Updates the application whether or not there is a new update available
         /// </summary>
-        /// <param name="OneActionForAll">Event you want to be called when anything in the Updater changes</param>
+        /// <param name="OneActionForAll">Event you want to be called when UpdaterState changes</param>
         public static void Update(Action<object, EventArgs> OneActionForAll)
         {
             if (OneActionForAll != null) UpdaterChange += new UpdaterChangeEvent(OneActionForAll);
@@ -415,11 +415,11 @@ namespace EZ_Updater
         }
 
         /// <summary>
-        /// Updates the application wheter or not there new update available
+        /// Updates the application whether or not there is a new update available
         /// </summary>
-        /// <param name="CanceledDownloadR">Event you want to be called when download is canceled</param>
-        /// <param name="RetryDownloadR">Event you want to be called retrying download</param>
-        /// <param name="DownloadProgressEventR">Event you want to be called when download is progressing
+        /// <param name="CanceledDownloadR">Event you want to be called when the download is canceled</param>
+        /// <param name="RetryDownloadR">Event you want to be called when retrying download</param>
+        /// <param name="DownloadProgressEventR">Event you want to be called when the download is progressing
         ///     <code>
         ///     Example:
         ///     
@@ -429,8 +429,8 @@ namespace EZ_Updater
         ///         }
         ///     </code>
         /// </param>
-        /// <param name="UpdateFailedR">Event you want to be called when update had failed</param>
-        /// <param name="UpdateFinishedR">Event you want to be called when update had finished (like a application restart to apply update)</param>
+        /// <param name="UpdateFailedR">Event you want to be called when the update had failed</param>
+        /// <param name="UpdateFinishedR">Event you want to be called when the update had finished (like an application restart to apply the update)</param>
         public static void Update(
             Action<object, DownloadProgressChangedEventArgs> DownloadProgressEventR = null,
             Action<object, EventArgs> CanceledDownloadR = null,
