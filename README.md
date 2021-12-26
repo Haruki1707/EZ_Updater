@@ -1,7 +1,7 @@
 <h1 align="center">
   <br>
   <a href="https://www.nuget.org/packages/EZ_Updater/">
-    <img src="https://github.com/Haruki1707/EZ_Updater/blob/main/EZ_Updater/EZ%20Updater.png?raw=true" alt="yuzu" width="200">
+    <img src="https://github.com/Haruki1707/EZ_Updater/blob/main/EZ_Updater/EZ%20Updater.png?raw=true" width="200">
   </a>
   <br>
   <b>EZ_Updater</b>
@@ -31,36 +31,37 @@ PM> Install-Package EZ_Updater
 * .NET 5.0 or above
 
 ## How it works
-EZ_Updater checks latest GitHub release on the repository specified, it returns a bool if the tag version is higher than your program **File Version** returns true else false. You can dowload the asset that matches your programname.exe. In case you want to download other file like a zip, you should specifie it.
+EZ_Updater checks latest GitHub release on the repository specified, it returns a bool if the tag version is higher than your program **File Version** returns true else false. You can download the asset that matches your programname.exe. In case you want to download other file like a zip, you should specify it.
 
 ## Current version detection
 EZ_Updater uses File version to determine the current version of the application. You can update it by going to Properties of the project.
 
 ## GitHub release version
 GitHub tag can follow this format (Major).(Minor).(Patch).(Build)
-It´s not obligatory to use Minor, Patch and Build. There could be any letter or word on the tag name.
+It´s not obligatory to use Minor, Patch and Build.
+There could be any letter or word on the tag name.
 Examples:
-    Tag name: 1.0
-    Tag name: v1.0.0
-    Tag name: v1.0.0.0-beta
+* Tag name: 1.0
+* Tag name: v1.0.0
+* Tag name: v1.0.0.0-beta
 
 ## Usage example for GUI on WinForms and WPF
 ##### It can be used in console as well
-<br>
-
+&nbsp;
+### WinForms
 Add a reference to
 ```csharp
 using EZ_Updater;
 ```
 
-Now on your form or window load you could do something like
+Now on your form load you could do something like
 ```csharp
-private async void Form_Loaded(object sender, RoutedEventArgs e)
+private async void Form_Loaded(object sender, EventArgs e)
 {
     Updater.GitHub_User = "Your GitHub User Name";
     Updater.GitHub_Repository = "Your GitHub Repository";
 
-    if (await Updater.CheckUpdateAsync() && MessageBox.Show("Update available\nDo you want to update?", "Confirmation", MessageBoxButton.YesNoCancel) == MessageBoxResult.Yes)
+    if (await Updater.CheckUpdateAsync() && MessageBox.Show("Update available\nDo you want to update?", "Confirmation", MessageBoxButtons.YesNo) == DialogResult.Yes)
     {
         new UpdateForm()
         {
@@ -70,9 +71,7 @@ private async void Form_Loaded(object sender, RoutedEventArgs e)
 }
 ```
 To force the update don't use the MessageBox
-<br><br>
 There also exist a synchronous CheckUpdate if you are interested in
-<br><br>
 ### Update Form (WinForms)
 Add a reference to
 ```csharp
@@ -98,7 +97,7 @@ For the method sent in Updater.Update is recommended to be like this
 ```csharp
 private void UIChange(object sender, EventArgs e)
 {
-    Messagelabel.text = Updater.Message;
+    Messagelabel.Text = Updater.Message;
     progressBar.Value = Updater.ProgressPercentage;
 
     switch (Updater.State)
@@ -114,6 +113,30 @@ private void UIChange(object sender, EventArgs e)
 }
 ```
 
+### WPF
+Add a reference to
+```csharp
+using EZ_Updater;
+```
+
+Now on your window load you could do something like
+```csharp
+private async void Window_Loaded(object sender, RoutedEventArgs e)
+{
+    Updater.GitHub_User = "Your GitHub User Name";
+    Updater.GitHub_Repository = "Your GitHub Repository";
+
+    if (await Updater.CheckUpdateAsync() && MessageBox.Show("Update available\nDo you want to update?", "Confirmation", MessageBoxButton.YesNoCancel) == MessageBoxResult.Yes)
+    {
+        new UpdateForm()
+        {
+            Owner = this
+        }.ShowDialog();
+    }
+}
+```
+To force the update don't use the MessageBox
+There also exist a synchronous CheckUpdate if you are interested in
 ### Update Window (WPF)
 Add a reference to
 ```csharp
@@ -173,6 +196,7 @@ Updater.ProgramFileVersion //To get the current program file version
 Updater.GUI_Context //To set your GUI Synchronization context
 Updater.DownloadRetryCount //To get the count of retries when downloading (MAX: 4)
 Updater.CustomLogger //To set a method to be called by EZ_Updater for custom logging
+Updater.LogInterfix //Interfix that joins "EZ_Updater" with the message on logging
 
 Updater.CheckUpdate() //To get if an update is available (sync)
 Updater.CheckUpdate("user", "repo") //To get if an update is available while establishing user and repo (sync)

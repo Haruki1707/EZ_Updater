@@ -8,18 +8,22 @@
     <DebugType>embedded</DebugType>
     <SignAssembly>False</SignAssembly>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <ContinuousIntegrationBuild>True</ContinuousIntegrationBuild>
     <Authors>Haruki1707</Authors>
-    <Version>0.5.0.1</Version>
+    <Version>0.5.0.4</Version>
     <Description>Updater for standalone .NET apps that relies on GitHub releases</Description>
     <Copyright>Haruki1707 2021</Copyright>
     <RepositoryUrl>https://github.com/Haruki1707/EZ_Updater</RepositoryUrl>
     <PackageTags>Updater; Update; GitHub; Release_Downloader</PackageTags>
     <PackageReleaseNotes></PackageReleaseNotes>
-    <PackageProjectUrl></PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/Haruki1707/EZ_Updater</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
     <PackageLicenseExpression> GPL-3.0-only</PackageLicenseExpression>
     <PackageIcon>EZ Updater.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EmbedUntrackedSources>True</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +31,10 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

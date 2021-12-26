@@ -14,43 +14,6 @@ using System.Text.RegularExpressions;
 [assembly: CLSCompliant(true)]
 namespace EZ_Updater
 {
-    struct GithubResponse
-    {
-        [JsonProperty("message")]
-        public string Message { get; set; }
-        [JsonProperty("tag_name")]
-        public string TagName { get; set; }
-        [JsonProperty("name")]
-        public string Name { get; set; }
-        [JsonProperty("assets")]
-        public List<Asset> Assets { get; set; }
-        [JsonProperty("body")]
-        public string Body { get; set; }
-    }
-    struct Asset
-    {
-        [JsonProperty("name")]
-        public string Name { get; set; }
-        [JsonProperty("browser_download_url")]
-        public string BrowserDownloadUrl { get; set; }
-    }
-
-    public enum UpdaterState
-    {
-        Idle = -1,
-        Fetching = 0,
-        CheckingUpdate = 1,
-        NoUpdateAvailable = 2,
-        UpdateAvailable = 3,
-        Downloading = 4,
-        Retrying = 5,
-        Canceled = 6,
-        Downloaded = 7,
-        Installing = 8,
-        InstallFailed = 9,
-        Installed = 10,
-    }
-
     public class Updater
     {
         /// <summary>
@@ -103,6 +66,12 @@ namespace EZ_Updater
         /// Updater message of UpdaterState
         /// </returns>
         public static string Message { get; private set; }
+
+        /// <summary>
+        /// Interfix that joins "EZ_Updater" with the message on logging.
+        /// </summary>
+        /// <value>\t</value>
+        public static string LogInterfix = "\t";
 
 
         // Program File Attributes
@@ -692,7 +661,7 @@ namespace EZ_Updater
         }
         private static void Log(string message)
         {
-            message = "EZ_Updater\t" + message;
+            message = "EZ_Updater" + LogInterfix + message;
             Trace.WriteLine(message);
             CallOnUIThread(() => { CustomLogger?.Invoke(message); });
         }
