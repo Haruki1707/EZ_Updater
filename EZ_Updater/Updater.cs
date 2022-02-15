@@ -1,15 +1,15 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Text;
-using Newtonsoft.Json;
-using System.Threading;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.IO.Compression;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 [assembly: CLSCompliant(true)]
 namespace EZ_Updater
@@ -25,18 +25,18 @@ namespace EZ_Updater
         /// GitHub repository where the release is located
         /// </summary>
         public static string GitHub_Repository { get; set; }
-        
+
         /// <summary>
         /// GitHub asset to download
         /// </summary>
-        /// <value>ProgramName.exe</value>
+        /// <value>Default: OriginalFileName</value>
         public static string GitHub_Asset { get; set; }
-        
+
         /// <returns>
         /// Count of how many retries of downloading are done (MAX: 4)
         /// </returns>
         public static int DownloadRetryCount { get; private set; }
-        
+
         /// <returns>
         /// GitHub latest release name (or tittle)
         /// </returns>
@@ -46,17 +46,25 @@ namespace EZ_Updater
         /// GitHub latest release body text
         /// </summary>
         public static string ReleaseBody { get; private set; }
-        
+
         /// <returns>
         /// GitHub latest release tag version (without letters, just: Major.Minor.Patch.Build)
         /// </returns>
         public static Version ReleaseVersion { get; private set; }
-        
+
         /// <returns>
         /// Updater state
         /// </returns>
         public static UpdaterState State { get; private set; }
-        
+
+        ///<summary>
+        ///Short State of updater, based on Idle, Updating, Canceled and Installed
+        ///</summary>
+        ///<returns>
+        ///Updater shorted state
+        ///</returns>
+        public static UpdaterShortState ShortState { get; private set; }
+
         /// <returns>
         /// Update download percentage
         /// </returns>
@@ -75,12 +83,12 @@ namespace EZ_Updater
 
 
         // Program File Attributes
-        readonly private static string ProgramFile = Process.GetCurrentProcess().MainModule.FileName;
-        readonly private static string ProgramFilePath = Path.GetDirectoryName(ProgramFile);
+        private static string ProgramFile = Process.GetCurrentProcess().MainModule.FileName;
+        private static string ProgramFilePath => Path.GetDirectoryName(ProgramFile);
         /// <returns>
         /// Main program file name
         /// </returns>
-        readonly public static string ProgramFileName = Path.GetFileName(ProgramFile);
+        public static string ProgramFileName => Path.GetFileName(ProgramFile);
         /// <returns>
         /// Main program file version
         /// </returns>
@@ -94,12 +102,58 @@ namespace EZ_Updater
 
 
         // Updater Attributes
+        /// <summary>
+        /// Here goes the original file name of the program (without the extension). OBLIGATORY
+        /// </summary>
+        public static string OriginalFileName { get; set; }
+        ///<summary>
+        /// Indicates that current program directory cannot be written, because admin rights needed or folder writte access is forbiden
+        ///</summary>
+        public static bool CannotWriteOnDir { get; private set; }
         private static WebClient WebClient;
         private static int MovedFiles = 0;
         private static int UpdateNFiles = 0;
         private static List<string> MovedFileDir = new List<string>();
         private static Timer Timer = new Timer(RetryToDownload, null, -1, -1);
         private static string EZTempPath => Path.GetTempPath() + $"EZ_Updater{DownloadRetryCount}";
+        private static bool API_Executed = false;
+        private static bool keepfilename = false;
+
+        /// <summary>
+        /// Keeps Original File Name for the program
+        /// </summary>
+        /// <value>false</value>
+        public static bool KeepOriginalFileName
+        {
+            get { return keepfilename; }
+            set
+            {
+                keepfilename = value;
+
+                if (keepfilename)
+                {
+                    _ = OriginalFileName ?? throw new NullReferenceException(nameof(OriginalFileName));
+                    OriginalFileName = Path.GetFileNameWithoutExtension(OriginalFileName);
+                    string OFN = OriginalFileName + Path.GetExtension(ProgramFileName);
+
+                    if (OFN == ProgramFileName)
+                        return;
+
+                    if (File.Exists(OFN))
+                        for (int i = 1; i < 100; i++)
+                            if (!File.Exists(OriginalFileName + $" - old ({i})" + Path.GetExtension(ProgramFileName)))
+                            {
+                                File.Move(OFN, OriginalFileName + $" - old ({i})" + Path.GetExtension(ProgramFileName));
+                                break;
+                            }
+
+                    File.Move(ProgramFileName, OFN);
+                    Log($"File renamed: {ProgramFileName} -> {OFN}");
+                    ProgramFile = $"{ProgramFilePath}\\{OFN}";
+                }
+            }
+        }
+
 
         // Updater Events things
         /// <summary>
@@ -134,6 +188,7 @@ namespace EZ_Updater
         protected static void OnDowloadCanceled()
         {
             State = UpdaterState.Canceled;
+            ShortState = UpdaterShortState.Canceled;
             Message = "Download canceled";
             Log("Download canceled");
             CallOnUIThread(() => { DownloadCanceled?.Invoke(null, EventArgs.Empty); });
@@ -161,7 +216,7 @@ namespace EZ_Updater
         public delegate void DownloadProgressEvent(object sender, DownloadProgressChangedEventArgs args);
         protected static void OnDownloadProgress(DownloadProgressChangedEventArgs e)
         {
-            Log(State != UpdaterState.Downloading ,$"Downloading: {AssetSelected.Name} | {AssetSelected.BrowserDownloadUrl}");
+            Log(State != UpdaterState.Downloading, $"Downloading: {AssetSelected.Name} | {AssetSelected.BrowserDownloadUrl}");
             State = UpdaterState.Downloading;
             Message = "Downloading update...";
             CallOnUIThread(() => { DownloadProgress?.Invoke(null, e); });
@@ -188,6 +243,7 @@ namespace EZ_Updater
         {
             Log("Update Failed! restoring backup files");
             State = UpdaterState.InstallFailed;
+            ShortState = UpdaterShortState.Canceled;
             Message = "Installation failed";
             CallOnUIThread(() => { UpdateFailed?.Invoke(null, EventArgs.Empty); });
             OnUpdaterChange();
@@ -201,6 +257,7 @@ namespace EZ_Updater
         protected static void OnUpdateFinished()
         {
             State = UpdaterState.Installed;
+            ShortState = UpdaterShortState.Installed;
             Message = "Update installed!";
             Log("Update installed!");
             OnUpdaterChange();
@@ -232,18 +289,32 @@ namespace EZ_Updater
 
         static Updater()
         {
-            GitHub_Asset = ProgramFileName;
+            CannotWriteOnDir = false;
             State = UpdaterState.Idle;
+            ShortState = UpdaterShortState.Idle;
             Message = "Idle...";
 
-            CleanFolder(ProgramFilePath, "*.EZold");
-
-            for(int i = 0; i < 4; i++)
+            try
             {
-                DownloadRetryCount = i;
-                if (Directory.Exists(EZTempPath))
-                    CleanFolder(EZTempPath);
+                File.Create("UpdaterWriteTest.EZ").Close();
+                File.Delete("UpdaterWriteTest.EZ");
+
+                for (int i = 0; i < 4; i++)
+                {
+                    DownloadRetryCount = i;
+                    if (Directory.Exists(EZTempPath))
+                        CleanAfterUpdate(EZTempPath, ProgramFilePath, "*.EZold");
+                }
             }
+            catch (UnauthorizedAccessException)
+            {
+                CannotWriteOnDir = true;
+                State = UpdaterState.CannotWriteOnDir;
+                ShortState = UpdaterShortState.Canceled;
+                Message = $"{OriginalFileName} has an update available, but cannot write on current folder. Please consider moving {OriginalFileName} to another location or starting it with Adminitrator Rights";
+                Log("User has not write access on current directory: {ProgramFilePath}. Consider moving.");
+            }
+
             DownloadRetryCount = 0;
         }
 
@@ -295,25 +366,32 @@ namespace EZ_Updater
         {
             _ = GitHub_User ?? throw new NullReferenceException(nameof(GitHub_User));
             _ = GitHub_Repository ?? throw new NullReferenceException(nameof(GitHub_Repository));
+            _ = OriginalFileName ?? throw new NullReferenceException(nameof(OriginalFileName));
 
-            bool API_Result = await API_Call();
-            if (!API_Result) return false;
+            bool API_Executed = await API_Call();
+            if (!API_Executed) return false;
 
             State = UpdaterState.CheckingUpdate;
             Message = "Checking Update...";
             Log($"Release version: {ReleaseVersion} | Program version: {ProgramFileVersion}");
 
             bool UpdateAvailable = ReleaseVersion > ProgramFileVersion;
+            if (State == UpdaterState.RepoNotFound || State == UpdaterState.RepoError)
+                return false;
             if (UpdateAvailable)
             {
                 State = UpdaterState.UpdateAvailable;
+                ShortState = UpdaterShortState.Idle;
                 Message = "Update available!";
             }
             else
             {
                 State = UpdaterState.NoUpdateAvailable;
+                ShortState = UpdaterShortState.Idle;
                 Message = "No update available";
             }
+
+            Log(Message);
 
             return UpdateAvailable;
         }
@@ -324,27 +402,33 @@ namespace EZ_Updater
             Message = "Fetching GitHub API";
             try
             {
-                WebClient = new WebClient();
-                WebClient.Headers.Add(HttpRequestHeader.UserAgent, GitHub_Repository);
-                WebClient.Headers.Add(HttpRequestHeader.Accept, "application/vnd.github.v3+json");
-                try
+                using (HttpClient jsonClient = new HttpClient())
                 {
-                    var Result = await WebClient.DownloadStringTaskAsync(GitHub_ApiUrl);
-                    APIResponse = JsonConvert.DeserializeObject<GithubResponse>(Result);
-                }
-                catch (WebException wex)
-                {
-                    using (var s = wex.Response.GetResponseStream())
-                    {
-                        var buffer = new byte[wex.Response.ContentLength];
-                        var contentBytes = s.Read(buffer, 0, buffer.Length);
-                        var content = Encoding.UTF8.GetString(buffer);
-                        APIResponse = JsonConvert.DeserializeObject<GithubResponse>(content);
-                    }
+                    jsonClient.DefaultRequestHeaders.Add("User-Agent", "EZ-Updater/0.5");
+                    jsonClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+
+                    var result = await jsonClient.GetAsync(GitHub_ApiUrl);
+                    APIResponse = JsonConvert.DeserializeObject<GithubResponse>(await result.Content.ReadAsStringAsync());
                 }
 
                 Log(APIResponse.Message == null, $"{GitHub_User}/{GitHub_Repository}: {APIResponse.Name}");
                 Log(APIResponse.Message != null, $"{GitHub_User}/{GitHub_Repository}: {APIResponse.Message}");
+
+                if (APIResponse.Message == "Not Found")
+                {
+                    State = UpdaterState.RepoNotFound;
+                    Message = "Repository not found";
+                    return false;
+                }
+                else if (APIResponse.Message != null)
+                {
+                    State = UpdaterState.RepoError;
+                    Message = "Repository error: " + APIResponse.Message;
+                    return false;
+                }
+
+                if (APIResponse.Name == null)
+                    APIResponse.Name = APIResponse.TagName;
 
                 string TAG = "";
                 MatchCollection MC = new Regex(@"(?<digit>\d+)").Matches(APIResponse.TagName);
@@ -380,7 +464,7 @@ namespace EZ_Updater
         public static void Update(Action<object, EventArgs> OneActionForAll)
         {
             if (OneActionForAll != null) UpdaterChange += new UpdaterChangeEvent(OneActionForAll);
-            Update(null, null);
+            Update();
         }
 
         /// <summary>
@@ -400,7 +484,7 @@ namespace EZ_Updater
         /// </param>
         /// <param name="UpdateFailedR">Event you want to be called when the update had failed</param>
         /// <param name="UpdateFinishedR">Event you want to be called when the update had finished (like an application restart to apply the update)</param>
-        public static void Update(
+        public static async void Update(
             Action<object, DownloadProgressChangedEventArgs> DownloadProgressEventR = null,
             Action<object, EventArgs> CanceledDownloadR = null,
             Action<object, EventArgs> RetryDownloadR = null,
@@ -408,21 +492,38 @@ namespace EZ_Updater
             Action<object, EventArgs> UpdateFailedR = null,
             Action<object, EventArgs> UpdateFinishedR = null)
         {
-            if(DownloadRetryCount >= 4)
-            { 
-                State = UpdaterState.Canceled;
-                Message = "Download canceled";
-                return; 
+            if (!API_Executed)
+                API_Executed = await API_Call();
+
+            if (State == UpdaterState.RepoNotFound || State == UpdaterState.RepoError)
+                return;
+
+            if (CannotWriteOnDir)
+            {
+                State = UpdaterState.CannotWriteOnDir;
+                ShortState = UpdaterShortState.Canceled;
+                Message = $"{OriginalFileName} has an update available, but cannot write on current folder. Please consider moving {OriginalFileName} to another location or starting it with Adminitrator Rights";
+                return;
             }
 
-            if(DownloadProgressEventR != null) DownloadProgress += new DownloadProgressEvent(DownloadProgressEventR);
-            if(CanceledDownloadR != null) DownloadCanceled += new DownloadCanceledEvent(CanceledDownloadR);
-            if(RetryDownloadR != null) RetryDownload += new RetryDownloadEvent(RetryDownloadR);
-            if(UpdateProgressR != null) UpdateProgress += new UpdateProgressEvent(UpdateProgressR);
-            if(UpdateFailedR != null) UpdateFailed += new UpdateFailedEvent(UpdateFailedR);
+            if (DownloadRetryCount >= 4)
+            {
+                State = UpdaterState.Canceled;
+                ShortState = UpdaterShortState.Canceled;
+                Message = "Download canceled";
+                return;
+            }
+
+            if (DownloadProgressEventR != null) DownloadProgress += new DownloadProgressEvent(DownloadProgressEventR);
+            if (CanceledDownloadR != null) DownloadCanceled += new DownloadCanceledEvent(CanceledDownloadR);
+            if (RetryDownloadR != null) RetryDownload += new RetryDownloadEvent(RetryDownloadR);
+            if (UpdateProgressR != null) UpdateProgress += new UpdateProgressEvent(UpdateProgressR);
+            if (UpdateFailedR != null) UpdateFailed += new UpdateFailedEvent(UpdateFailedR);
             if (UpdateFinishedR != null) UpdateFinished += new UpdateFinishedEvent(UpdateFinishedR);
 
             ProgressPercentage = 0;
+
+            GitHub_Asset = GitHub_Asset ?? (OriginalFileName + Path.GetExtension(ProgramFileName));
 
             foreach (var Asset in APIResponse.Assets)
                 if (Asset.Name == GitHub_Asset)
@@ -430,20 +531,25 @@ namespace EZ_Updater
 
             if (AssetSelected.Name == null)
             {
+                State = UpdaterState.AssetNotFound;
+                ShortState = UpdaterShortState.Canceled;
+                Message = "{GitHub_User}/{GitHub_Repository}: {GitHub_Asset} not founded in GitHub releases assets";
+
                 Log($"{GitHub_Asset}: not founded in GitHub release assets");
                 OnDowloadCanceled();
                 return;
             }
 
-            Update();
+            WebClient = new WebClient();
+            DoUpdate();
         }
 
-        private static void Update()
+        private static void DoUpdate()
         {
             if (Directory.Exists(EZTempPath))
                 CleanFolder(EZTempPath);
-            else
-                Directory.CreateDirectory(EZTempPath);
+
+            Directory.CreateDirectory(EZTempPath);
 
             WebClient.DownloadProgressChanged += new DownloadProgressChangedEventHandler(RestartTimer);
             WebClient.DownloadFileCompleted += new AsyncCompletedEventHandler(CompletedFile);
@@ -482,7 +588,7 @@ namespace EZ_Updater
             Timer.Change(5000, -1);
 
             DownloadRetryCount++;
-            Update();
+            DoUpdate();
 
             OnRetryDownload();
         }
@@ -501,6 +607,7 @@ namespace EZ_Updater
             if (!e.Cancelled && e.Error == null)
             {
                 State = UpdaterState.Downloaded;
+                ShortState = UpdaterShortState.Updating;
                 Message = "Update downloaded";
                 Timer.Change(-1, -1);
                 Timer.Dispose();
@@ -514,6 +621,7 @@ namespace EZ_Updater
         private static void InstallUpdate(object sender)
         {
             State = UpdaterState.Installing;
+            ShortState = UpdaterShortState.Updating;
             Message = "Installing Update...";
             string AssetDownloaded = $"{EZTempPath}\\{AssetSelected.Name}";
             switch (Path.GetExtension(AssetSelected.Name))
@@ -531,6 +639,9 @@ namespace EZ_Updater
 
             OnUpdateProgress();
 
+            if (!keepfilename && File.Exists(EZTempPath + $"\\{OriginalFileName}{Path.GetExtension(ProgramFileName)}"))
+                File.Move(EZTempPath + $"\\{OriginalFileName}{Path.GetExtension(ProgramFileName)}", EZTempPath + $"\\{ProgramFileName}");
+
             try
             {
                 Log("Installing files");
@@ -547,21 +658,21 @@ namespace EZ_Updater
                         if (FileDir.HasFlag(FileAttributes.Directory))
                             Directory.Delete(item, true);
                         else
+                        {
                             File.Delete(item);
+                            File.Move(item + ".EZold", item);
+                        }
                     }
                     MovedFileDir.Clear();
-
-                    MoveFilesRevert(ProgramFilePath);
 
                     ProgressPercentage = UpdateNFiles = MovedFiles = 0;
 
                     CleanFolder(EZTempPath);
-
-                    OnUpdateFailed();
                 }
                 catch { }
-            }
 
+                OnUpdateFailed();
+            }
         }
 
         private static void CleanFolder(string directory, string filepattern = "*")
@@ -576,6 +687,22 @@ namespace EZ_Updater
                 else
                     dir.Delete(true);
             }
+
+            if (Adir.GetFiles().Length < 1)
+                Adir.Delete(true);
+        }
+
+        private static void CleanAfterUpdate(string EZdirectory, string directory, string filepattern = "*")
+        {
+            DirectoryInfo Adir = new DirectoryInfo(EZdirectory);
+            foreach (DirectoryInfo dir in Adir.GetDirectories())
+                if (Directory.Exists(directory + dir.FullName.Replace(EZdirectory, "")))
+                    CleanFolder(directory + dir.FullName.Replace(EZdirectory, ""), filepattern);
+            DirectoryInfo Bdir = new DirectoryInfo(directory);
+            foreach (FileInfo file in Bdir.GetFiles(filepattern))
+                file.Delete();
+
+            CleanFolder(EZdirectory);
         }
 
         private static void MoveFilesInstall(string directory, string destDir)
@@ -610,17 +737,9 @@ namespace EZ_Updater
             }
         }
 
-        private static void MoveFilesRevert(string directory)
-        {
-            foreach (FileInfo file in new DirectoryInfo(directory).GetFiles("*.EZold"))
-                file.MoveTo(file.FullName.Replace(".EZold", ""));
-            foreach (DirectoryInfo dir in new DirectoryInfo(directory).GetDirectories())
-                MoveFilesRevert(dir.FullName);
-        }
-
         private static void UpdateProgressCalc(string directory)
         {
-            if(UpdateNFiles == 0)
+            if (UpdateNFiles == 0)
                 UpdateNFiles = Directory.GetFiles(directory, "*", SearchOption.AllDirectories).Length + 1;
             MovedFiles++;
             ProgressPercentage = int.Parse(Math.Truncate((double)MovedFiles / (double)UpdateNFiles * 100).ToString());
@@ -654,16 +773,17 @@ namespace EZ_Updater
             }
         }
 
-        private static void Log(bool condition, string message)
-        {
-            if (condition)
-                Log(message);
-        }
         private static void Log(string message)
         {
             message = "EZ_Updater" + LogInterfix + message;
             Trace.WriteLine(message);
             CallOnUIThread(() => { CustomLogger?.Invoke(message); });
+        }
+
+        private static void Log(bool condition, string message)
+        {
+            if (condition)
+                Log(message);
         }
     }
 }

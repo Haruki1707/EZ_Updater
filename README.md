@@ -60,13 +60,19 @@ private async void Form_Loaded(object sender, EventArgs e)
 {
     Updater.GitHub_User = "Your GitHub User Name";
     Updater.GitHub_Repository = "Your GitHub Repository";
+    Updater.OriginalFileName = "Your .exe (or whatever) file name";
 
     if (await Updater.CheckUpdateAsync() && MessageBox.Show("Update available\nDo you want to update?", "Confirmation", MessageBoxButtons.YesNo) == DialogResult.Yes)
     {
-        new UpdateForm()
+        if(Updater.CannotWriteOnDir)
+            MessageBox.Show("Application cannot update in current directory, consider moving it to another folder or executing with Admin rights", "Alert");
+        else
         {
-            Owner = this
-        }.ShowDialog();
+            new UpdateForm()
+            {
+                Owner = this
+            }.ShowDialog();
+        }
     }
 }
 ```
@@ -100,13 +106,12 @@ private void UIChange(object sender, EventArgs e)
     Messagelabel.Text = Updater.Message;
     progressBar.Value = Updater.ProgressPercentage;
 
-    switch (Updater.State)
+    switch (Updater.ShortState)
     {
-        case UpdaterState.Canceled:
-        case UpdaterState.InstallFailed:
+        case UpdaterShortState.Canceled:
             Closebutton.Visible = true;
             break;
-        case UpdaterState.Installed:
+        case UpdaterShortState.Installed:
             Application.Restart();
             break;
     }
@@ -125,13 +130,19 @@ private async void Window_Loaded(object sender, RoutedEventArgs e)
 {
     Updater.GitHub_User = "Your GitHub User Name";
     Updater.GitHub_Repository = "Your GitHub Repository";
+    Updater.OriginalFileName = "Your .exe (or whatever) file name";
 
     if (await Updater.CheckUpdateAsync() && MessageBox.Show("Update available\nDo you want to update?", "Confirmation", MessageBoxButton.YesNoCancel) == MessageBoxResult.Yes)
     {
-        new UpdateForm()
+        if(Updater.CannotWriteOnDir)
+            MessageBox.Show("Application cannot update in current directory, consider moving it to another folder or executing with Admin rights", "Alert");
+        else
         {
-            Owner = this
-        }.ShowDialog();
+            new UpdateForm()
+            {
+                Owner = this
+            }.ShowDialog();
+        }
     }
 }
 ```
@@ -165,13 +176,12 @@ private void UIChange(object sender, EventArgs e)
     Messagelabel.Content = Updater.Message;
     progressBar.Value = Updater.ProgressPercentage;
 
-    switch (Updater.State)
+    switch (Updater.ShortState)
     {
-        case UpdaterState.Canceled:
-        case UpdaterState.InstallFailed:
+        case UpdaterShortState.Canceled:
             Closebutton.Visibility = Visibility.Visible;
             break;
-        case UpdaterState.Installed:
+        case UpdaterShortState.Installed:
             Process.Start(Updater.ProgramFileName);
             Application.Current.Shutdown();
             break;
@@ -182,11 +192,15 @@ private void UIChange(object sender, EventArgs e)
 ## Documentation
 EZ_Updater has all the properties, attributes, methods and events listed below
 ```csharp
-Updater.GitHub_User //To get or set the GitHub user
-Updater.GitHub_Repository //To get or set the GitHub repository
-Updater.GitHub_Asset //To get or set the GitHub asset to be downloaded
+Updater.GitHub_User //To get or set the GitHub user | Required
+Updater.GitHub_Repository //To get or set the GitHub repository | Required
+Updater.OriginalFileName //To set the .exe original name | Required
+Updater.CannotWriteOnDir //Bool to check if your program can write in current directory | Should check
+Updater.KeepOriginalFileName //To rename .exe to original name even if user changes the name | Default: false
+Updater.GitHub_Asset //To get or set the GitHub asset to be downloaded | Default: OriginalFileName
 Updater.Message //To get a message to show on GUI or Console
 Updater.State //To get the current state of the Updater
+Updater.ShortState //To get if Updater is Idling, Updating, Canceled or Installed (Short version of Updater.State)
 Updater.ProgressPercentage //To get current percentage of Download progress or Install progress
 Updater.ReleaseName //To get the latest GitHub release name (or title)
 Updater.ReleaseBody //To get the latest GitHub release body text

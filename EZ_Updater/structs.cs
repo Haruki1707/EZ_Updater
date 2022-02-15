@@ -21,23 +21,37 @@ namespace EZ_Updater
     {
         [JsonProperty("name")]
         public string Name { get; set; }
+        [JsonProperty("size")]
+        public string Size { get; set; }
         [JsonProperty("browser_download_url")]
         public string BrowserDownloadUrl { get; set; }
     }
 
     public enum UpdaterState
     {
-        Idle = -1,
-        Fetching = 0,
-        CheckingUpdate = 1,
-        NoUpdateAvailable = 2,
-        UpdateAvailable = 3,
-        Downloading = 4,
-        Retrying = 5,
-        Canceled = 6,
-        Downloaded = 7,
-        Installing = 8,
-        InstallFailed = 9,
-        Installed = 10,
+        CannotWriteOnDir,
+        Idle,
+        Fetching,
+        RepoNotFound,
+        RepoError,
+        AssetNotFound,
+        CheckingUpdate,
+        NoUpdateAvailable,
+        UpdateAvailable,
+        Downloading,
+        Retrying,
+        Canceled,
+        Downloaded,
+        Installing,
+        InstallFailed,
+        Installed
+    }
+
+    public enum UpdaterShortState
+    {
+        Idle,
+        Updating,
+        Canceled,
+        Installed
     }
 }
