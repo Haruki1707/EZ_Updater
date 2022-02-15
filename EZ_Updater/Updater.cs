@@ -203,6 +203,7 @@ namespace EZ_Updater
         protected static void OnRetryDownload()
         {
             State = UpdaterState.Retrying;
+            ShortState = UpdaterShortState.Updating;
             Message = $"Retrying download... {DownloadRetryCount}/4";
             Log($"Retrying download {DownloadRetryCount}/4");
             CallOnUIThread(() => { RetryDownload?.Invoke(null, EventArgs.Empty); });
@@ -218,6 +219,7 @@ namespace EZ_Updater
         {
             Log(State != UpdaterState.Downloading, $"Downloading: {AssetSelected.Name} | {AssetSelected.BrowserDownloadUrl}");
             State = UpdaterState.Downloading;
+            ShortState = UpdaterShortState.Updating;
             Message = "Downloading update...";
             CallOnUIThread(() => { DownloadProgress?.Invoke(null, e); });
             OnUpdaterChange();
@@ -230,6 +232,8 @@ namespace EZ_Updater
         public delegate void UpdateProgressEvent(object sender, EventArgs args);
         protected static void OnUpdateProgress()
         {
+            State = UpdaterState.Installing;
+            ShortState = UpdaterShortState.Updating;
             CallOnUIThread(() => { UpdateProgress?.Invoke(null, EventArgs.Empty); });
             OnUpdaterChange();
         }
@@ -274,6 +278,13 @@ namespace EZ_Updater
         protected static void OnUpdaterChange()
         {
             CallOnUIThread(() => { UpdaterChange?.Invoke(null, EventArgs.Empty); }, false);
+        }
+
+        private static void CanceledSomething()
+        {
+            CallOnUIThread(() => { DownloadCanceled?.Invoke(null, EventArgs.Empty); });
+            CallOnUIThread(() => { UpdateFailed?.Invoke(null, EventArgs.Empty); });
+            OnUpdaterChange();
         }
 
         public static void TryToCleanEvents()
@@ -417,12 +428,14 @@ namespace EZ_Updater
                 if (APIResponse.Message == "Not Found")
                 {
                     State = UpdaterState.RepoNotFound;
+                    ShortState = UpdaterShortState.Canceled;
                     Message = "Repository not found";
                     return false;
                 }
                 else if (APIResponse.Message != null)
                 {
                     State = UpdaterState.RepoError;
+                    ShortState = UpdaterShortState.Canceled;
                     Message = "Repository error: " + APIResponse.Message;
                     return false;
                 }
@@ -496,13 +509,17 @@ namespace EZ_Updater
                 API_Executed = await API_Call();
 
             if (State == UpdaterState.RepoNotFound || State == UpdaterState.RepoError)
+            {
+                CanceledSomething();
                 return;
+            }
 
             if (CannotWriteOnDir)
             {
                 State = UpdaterState.CannotWriteOnDir;
                 ShortState = UpdaterShortState.Canceled;
                 Message = $"{OriginalFileName} has an update available, but cannot write on current folder. Please consider moving {OriginalFileName} to another location or starting it with Adminitrator Rights";
+                CanceledSomething();
                 return;
             }
 
@@ -511,6 +528,7 @@ namespace EZ_Updater
                 State = UpdaterState.Canceled;
                 ShortState = UpdaterShortState.Canceled;
                 Message = "Download canceled";
+                CanceledSomething();
                 return;
             }
 
@@ -533,10 +551,10 @@ namespace EZ_Updater
             {
                 State = UpdaterState.AssetNotFound;
                 ShortState = UpdaterShortState.Canceled;
-                Message = "{GitHub_User}/{GitHub_Repository}: {GitHub_Asset} not founded in GitHub releases assets";
+                Message = $"{GitHub_User}/{GitHub_Repository}: {GitHub_Asset} not founded in GitHub releases assets";
 
                 Log($"{GitHub_Asset}: not founded in GitHub release assets");
-                OnDowloadCanceled();
+                CanceledSomething();
                 return;
             }
 
