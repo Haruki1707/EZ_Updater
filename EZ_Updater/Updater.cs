@@ -117,7 +117,7 @@ namespace EZ_Updater
         private static List<string> MovedFileDir = new List<string>();
         private static Timer Timer = new Timer(RetryToDownload, null, -1, -1);
         private static string NullReference(string VarName) => $"{VarName} cannot be null when checking if an is update available. Please define {VarName} first.";
-        private static string EZTempPath => Path.GetTempPath() + $"EZ_Updater{DownloadRetryCount}";
+        private static string EZTempPath => Path.GetTempPath() + $"EZ_Updater{DownloadRetryCount}{OriginalFileName}";
         private static bool API_Executed = false;
         private static bool keepfilename = false;
 

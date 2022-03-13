@@ -10,7 +10,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <ContinuousIntegrationBuild>True</ContinuousIntegrationBuild>
     <Authors>Haruki1707</Authors>
-    <Version>0.5.3</Version>
+    <Version>0.5.3.1</Version>
     <Description>Updater for standalone .NET apps that relies on GitHub releases</Description>
     <Copyright>Haruki1707 2021</Copyright>
     <RepositoryUrl>https://github.com/Haruki1707/EZ_Updater</RepositoryUrl>
