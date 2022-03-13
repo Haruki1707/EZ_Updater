@@ -194,10 +194,10 @@ EZ_Updater has all the properties, attributes, methods and events listed below
 ```csharp
 Updater.GitHub_User //To get or set the GitHub user | Required
 Updater.GitHub_Repository //To get or set the GitHub repository | Required
-Updater.OriginalFileName //To set the .exe original name | Required
-Updater.CannotWriteOnDir //Bool to check if your program can write in current directory | Should check
-Updater.KeepOriginalFileName //To rename .exe to original name even if user changes the name | Default: false
 Updater.GitHub_Asset //To get or set the GitHub asset to be downloaded | Default: OriginalFileName
+Updater.CannotWriteOnDir //Bool to check if your program can write in current directory | Should check
+Updater.OriginalFileName //To set the .exe original name | Default: Assembly Name
+Updater.KeepOriginalFileName //To rename .exe to original name even if user changes the name | Default: false
 Updater.Message //To get a message to show on GUI or Console
 Updater.State //To get the current state of the Updater
 Updater.ShortState //To get if Updater is Idling, Updating, Canceled or Installed (Short version of Updater.State)

@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -103,7 +104,7 @@ namespace EZ_Updater
 
         // Updater Attributes
         /// <summary>
-        /// Here goes the original file name of the program (without the extension). OBLIGATORY
+        /// Here goes the original file name of the program (without the extension).
         /// </summary>
         public static string OriginalFileName { get; set; }
         ///<summary>
@@ -115,6 +116,7 @@ namespace EZ_Updater
         private static int UpdateNFiles = 0;
         private static List<string> MovedFileDir = new List<string>();
         private static Timer Timer = new Timer(RetryToDownload, null, -1, -1);
+        private static string NullReference(string VarName) => $"{VarName} cannot be null when checking if an is update available. Please define {VarName} first.";
         private static string EZTempPath => Path.GetTempPath() + $"EZ_Updater{DownloadRetryCount}";
         private static bool API_Executed = false;
         private static bool keepfilename = false;
@@ -300,6 +302,7 @@ namespace EZ_Updater
 
         static Updater()
         {
+            OriginalFileName = Assembly.GetEntryAssembly().GetName().Name;
             CannotWriteOnDir = false;
             State = UpdaterState.Idle;
             ShortState = UpdaterShortState.Idle;
@@ -375,10 +378,6 @@ namespace EZ_Updater
 
         private static async Task<bool> CheckVersion()
         {
-            _ = GitHub_User ?? throw new NullReferenceException(nameof(GitHub_User));
-            _ = GitHub_Repository ?? throw new NullReferenceException(nameof(GitHub_Repository));
-            _ = OriginalFileName ?? throw new NullReferenceException(nameof(OriginalFileName));
-
             bool API_Executed = await API_Call();
             if (!API_Executed) return false;
 
@@ -409,6 +408,10 @@ namespace EZ_Updater
 
         private static async Task<bool> API_Call()
         {
+            _ = GitHub_User ?? throw new NullReferenceException(NullReference(nameof(GitHub_User)));
+            _ = GitHub_Repository ?? throw new NullReferenceException(NullReference(nameof(GitHub_Repository)));
+            _ = OriginalFileName ?? throw new NullReferenceException(NullReference(nameof(OriginalFileName)));
+
             State = UpdaterState.Fetching;
             Message = "Fetching GitHub API";
             try
